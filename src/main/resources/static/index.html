@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>Togglz Feature Toggle Demo 2.0</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; padding: 40px; background: #fdfdfd; line-height: 1.6; }
+        .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 25px; border: 1px solid #eee; }
+        .banner { background: #6c5ce7; color: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: none; text-align: center; }
+        .btn { background: #0984e3; color: white; border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer; text-decoration: none; font-weight: bold; display: inline-block; }
+        .console-link { color: #d63031; font-weight: bold; text-decoration: none; margin-right: 20px; }
+        .user-box { background: #f1f2f6; padding: 15px; border-radius: 8px; border-left: 5px solid #0984e3; margin-bottom: 20px; }
+        .welcome-msg { color: #4f46e5; font-size: 1.2rem; font-weight: bold; margin-bottom: 10px; }
+        .login-form { display: flex; gap: 10px; align-items: center; }
+        .login-form input { padding: 8px; border-radius: 4px; border: 1px solid #ddd; }
+    </style>
+</head>
+<body>
+    <h1>🌙 Luna Togglz Demo Center</h1>
+    
+    <div id="discountBanner" class="banner">
+        🔥 Togglz Special: Unlimited Features Enabled!
+    </div>
+
+    <div class="user-box">
+        <h3>👤 使用者身分</h3>
+        <!-- 登入後顯示 -->
+        <div id="loggedInArea" style="display:none;">
+            <div id="welcomeArea" class="welcome-msg" style="display:none;">🌟 您好，大大！歡迎回來！✨</div>
+            <p id="userInfo">Loading user data...</p>
+            <button onclick="doLogout()" class="btn" style="background:#636e72">登出 (Logout)</button>
+        </div>
+        <!-- 未登入顯示 -->
+        <div id="loggedOutArea" class="login-form">
+            <input type="text" id="username" placeholder="帳號 (demouser/guest)">
+            <input type="password" id="password" placeholder="密碼 (password)">
+            <button onclick="doLogin()" class="btn">立即登入</button>
+            <span id="loginError" style="color:red; font-size:0.8rem; margin-left:10px;"></span>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>🐣 Easter Egg (User Targeting)</h3>
+        <p id="easterEggMsg" style="font-weight: bold; color: #6c5ce7;">(Click to refresh)</p>
+        <button class="btn" style="background:#00b894" onclick="fetchEasterEgg()">Fetch Message</button>
+    </div>
+
+    <div class="card" style="border: 2px solid #e17055;">
+        <h3>⚙️ Admin Access (Restricted)</h3>
+        <p>Only <strong>demouser</strong> can access these tools:</p>
+        <div style="margin-top: 15px;">
+            <a href="/togglz-console/index" target="_blank" class="console-link">👉 Togglz Console</a>
+            <a href="/h2-console" target="_blank" class="console-link" style="color: #4834d4;">👉 H2 Console</a>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>⚡ Logic Switch</h3>
+        <p>Current Logic: <strong id="algoName">...</strong></p>
+        <button class="btn" onclick="fetchLogic()">Refresh Logic</button>
+    </div>
+
+    <script>
+        async function checkAuth() {
+            try {
+                const res = await fetch('/api/user/me');
+                const data = await res.json();
+                
+                if (data.username !== "anonymous") {
+                    document.getElementById('loggedInArea').style.display = 'block';
+                    document.getElementById('loggedOutArea').style.display = 'none';
+                    document.getElementById('userInfo').textContent = `LoggedIn as: ${data.username} | Role: ${data.role}`;
+                    refreshUI(); fetchLogic(); fetchEasterEgg();
+                } else {
+                    document.getElementById('loggedInArea').style.display = 'none';
+                    document.getElementById('loggedOutArea').style.display = 'flex';
+                }
+            } catch (e) { console.error("Auth check failed", e); }
+        }
+
+        async function doLogin() {
+            const user = document.getElementById('username').value;
+            const pass = document.getElementById('password').value;
+            const errorSpan = document.getElementById('loginError');
+            errorSpan.textContent = "正在登入...";
+
+            const formData = new FormData();
+            formData.append('username', user);
+            formData.append('password', pass);
+
+            const res = await fetch('/login', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (res.ok) {
+                errorSpan.textContent = "";
+                checkAuth();
+            } else {
+                errorSpan.textContent = "❌ 登入失敗";
+            }
+        }
+
+        async function doLogout() {
+            await fetch('/logout', { method: 'POST' });
+            window.location.reload();
+        }
+
+        async function refreshUI() {
+            try {
+                const res = await fetch('/api/status');
+                if (!res.ok) return;
+                const flags = await res.json();
+                document.getElementById('discountBanner').style.display = flags.DISCOUNT_BANNER ? 'block' : 'none';
+                document.getElementById('welcomeArea').style.display = flags.HELLO_WORLD ? 'block' : 'none';
+            } catch (e) { }
+        }
+
+        async function fetchLogic() {
+            const res = await fetch('/api/compute');
+            if (!res.ok) return;
+            const data = await res.json();
+            document.getElementById('algoName').textContent = data.algorithm;
+        }
+
+        async function fetchEasterEgg() {
+            const res = await fetch('/api/message');
+            if (!res.ok) { document.getElementById('easterEggMsg').textContent = "Access Denied. 🔒"; return; }
+            const data = await res.json();
+            document.getElementById('easterEggMsg').textContent = data.content;
+        }
+
+        checkAuth();
+        setInterval(refreshUI, 2000);
+    </script>
+</body>
+</html>
