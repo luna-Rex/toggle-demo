@@ -26,7 +26,12 @@
    ```bash
    ./mvnw spring-boot:run
    ```
-3. 打開瀏覽器存取：👉 [http://localhost:8081/index.html](http://localhost:8081/index.html)
+3. **資料庫初始化**：
+   首次執行或需要重設資料庫時，請存取以下 API 端點進行初始化：
+   👉 [http://localhost:8081/api/db/init](http://localhost:8081/api/db/init)
+   *(此操作會檢查並建立 `DEMO_TOGGLZ` 資料表並載入初始開關設定)*
+
+4. 打開瀏覽器存取：👉 [http://localhost:8081/index.html](http://localhost:8081/index.html)
 
 ## 👤 測試帳號
 | 帳號 | 密碼 | 角色 (Role) | 權限內容 |
